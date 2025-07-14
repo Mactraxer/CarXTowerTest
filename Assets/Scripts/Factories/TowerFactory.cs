@@ -21,9 +21,9 @@ public class TowerFactory : ITowerFactory
         _damageSystem = damageSystem;
     }
 
-    public TowerPresenter CreateTower(Vector3 position, TowerType type)
+    public TowerPresenter CreateTower(Vector3 position, TowerType type, TrajectoryMode trajectoryMode)
     {
-        var config = _configs.FirstOrDefault(config => config.type == type);
+        var config = _configs.FirstOrDefault(config => config.type == type && config.trajectoryMode == trajectoryMode);
         if (_configs.Length == 0 || config == null)
         {
             throw new Exception($"No config for this type={type} of tower");

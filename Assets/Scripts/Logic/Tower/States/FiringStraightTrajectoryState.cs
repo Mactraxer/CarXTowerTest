@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class FiringStraightTrajectoryState : ITowerState
 {
     private readonly CannonTowerModel _model;
@@ -9,9 +11,14 @@ public class FiringStraightTrajectoryState : ITowerState
 
     public void Enter()
     {
-        var fireVelocity = _model.TargetingSystem.CalculateStraightFireVelocityVector(_model.ShootPointPosition, _model.Target.CurrentPosition, _model.Target.Velocity, _model.ProjectileSpeed);
-        _model.SetFireVelocity(fireVelocity);
-        _model.Shoot();
+        Vector3 fireDirection;
+
+        if (_model.TargetingSystem.CalculateStraightFireDirectionVector(_model.ShootPointPosition, _model.Target.CurrentPosition, _model.Target.Velocity, _model.ProjectileSpeed, out fireDirection))
+        {
+            _model.SetFireVelocity(fireDirection);
+            _model.Shoot();
+        }
+
         _model.StateMachine.ChangeState<CooldownState>();
     }
 

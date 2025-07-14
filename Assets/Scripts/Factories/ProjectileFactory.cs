@@ -17,9 +17,33 @@ public class ProjectileFactory : IProjectileFactory
         _pools = new Dictionary<ProjectileType, Queue<ProjectilePresenter>>();
     }
 
-    public ProjectilePresenter Create(ProjectileType projectileType, Vector3 startPosition, ITarget target)
+    public void Dispose(ProjectilePresenter projectile)
     {
-        var config = _configs.FirstOrDefault(config => config.type == projectileType);
+        projectile.Dispose();
+        projectile.OnLifeTimeEnded -= OnEndedPresenterLifeTimeHandler;
+        if (_pools.ContainsKey(projectile.Model.ProjectileType))
+        {
+            _pools[projectile.Model.ProjectileType].Enqueue(projectile);
+        }
+        else
+        {
+            _pools.Add(projectile.Model.ProjectileType, new Queue<ProjectilePresenter>());
+        }
+    }
+
+    public CannonProjectilePresenter CreateCannon(ProjectileType projectileType, TrajectoryMode trajectoryMode, Vector3 shootPointPosition, ITarget target)
+    {
+        return Create(projectileType, trajectoryMode, shootPointPosition, target) as CannonProjectilePresenter;
+    }
+
+    public GuidedProjectilePresenter CreateGuided(ProjectileType projectileType, Vector3 shootPointPosition, ITarget target)
+    {
+        return Create(projectileType, TrajectoryMode.Straight, shootPointPosition, target) as GuidedProjectilePresenter;
+    }
+
+    private ProjectilePresenter Create(ProjectileType projectileType, TrajectoryMode trajectoryMode, Vector3 startPosition, ITarget target)
+    {
+        var config = _configs.FirstOrDefault(config => config.type == projectileType && config.trajectoryMode == trajectoryMode);
         if (_configs.Length == 0 || config == null)
         {
             throw new System.Exception($"No config for this type={projectileType} of projectile");
@@ -40,35 +64,6 @@ public class ProjectileFactory : IProjectileFactory
 
             return presenter;
         }
-    }
-
-    public void Dispose(ProjectilePresenter projectile)
-    {
-        projectile.Dispose();
-        projectile.OnLifeTimeEnded -= OnEndedPresenterLifeTimeHandler;
-        if (_pools.ContainsKey(projectile.Model.ProjectileType))
-        {
-            _pools[projectile.Model.ProjectileType].Enqueue(projectile);
-        }
-        else
-        {
-            _pools.Add(projectile.Model.ProjectileType, new Queue<ProjectilePresenter>());
-        }
-    }
-
-    public CannonProjectilePresenter CreateCannon(ProjectileType projectileType, Vector3 shootPointPosition, ITarget target)
-    {
-        return Create(projectileType, shootPointPosition, target) as CannonProjectilePresenter;
-    }
-
-    public GuidedProjectilePresenter CreateGuided(ProjectileType projectileType, Vector3 shootPointPosition, ITarget target)
-    {
-        return Create(projectileType, shootPointPosition, target) as GuidedProjectilePresenter;
-    }
-
-    private void OnEndedPresenterLifeTimeHandler(ProjectilePresenter presenter)
-    {
-        Dispose(presenter);
     }
 
     private ProjectilePresenter GetPresenterByType(ProjectileConfigSO config, Vector3 startPosition, ITarget target)
@@ -96,6 +91,11 @@ public class ProjectileFactory : IProjectileFactory
         }
     }
     
+    private void OnEndedPresenterLifeTimeHandler(ProjectilePresenter presenter)
+    {
+        Dispose(presenter);
+    }
+
     private TTowerView LoadAndInstantiateView<TTowerView>(Vector3 position, string path) where TTowerView : ProjectileView
     {
         var prefab = _assetLoader.Load<TTowerView>(path);

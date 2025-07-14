@@ -38,7 +38,7 @@ public class LevelPresenter
     {
         foreach (var towerSlot in _levelModel.TowerSlots)
         {
-            var towerPresenter = _towerFactory.CreateTower(towerSlot.Position, towerSlot.Type);
+            var towerPresenter = _towerFactory.CreateTower(towerSlot.Position, towerSlot.Type, towerSlot.TrajectoryMode);
             _towers.Add(towerPresenter);
             towerPresenter.Start();
         }

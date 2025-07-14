@@ -46,7 +46,7 @@ public class CannonTowerModel : TowerModel
 
     public override void Shoot()
     {
-        var projectile = _projectileFactory.CreateCannon(ProjectileType, ShootPointPosition, Target);
+        var projectile = _projectileFactory.CreateCannon(ProjectileType, _trajectoryMode, ShootPointPosition, Target);
         projectile.MoveToTargetWithOffset(Target, FireOffset, OnHitCallback);
     }
 

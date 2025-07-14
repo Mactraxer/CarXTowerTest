@@ -11,7 +11,7 @@ public class FiringParabolicTrajectoryState : ITowerState
 
     public void Enter()
     {
-        if (_model.TargetingSystem.CalculateParabolicVelocity(_model.ShootPointPosition, _model.Target.CurrentPosition, _model.Target.Velocity, _model.ProjectileSpeed, out Vector3 initialFireVelocity))
+        if (_model.TargetingSystem.CalculateParabolicFireVelocity(_model.ShootPointPosition, _model.Target.CurrentPosition, _model.Target.Velocity, _model.ProjectileSpeed, out Vector3 initialFireVelocity))
         {
             _model.SetFireVelocity(initialFireVelocity);
             _model.Shoot();

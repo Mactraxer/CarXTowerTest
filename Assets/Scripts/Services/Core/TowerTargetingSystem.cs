@@ -7,40 +7,86 @@ public class TowerTargetingSystem : ITowerTargetingSystem
         return area.GetFirstEnemy();
     }
 
-    public Vector3 CalculateStraightFireVelocityVector(Vector3 shooterPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed)
+    public bool CalculateStraightFireDirectionVector(Vector3 shooterPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed, out Vector3 fireDirection)
     {
+        fireDirection = Vector3.zero;
+
         Vector3 toTarget = targetPos - shooterPos;
-        float distance = toTarget.magnitude;
+        if (!SolveAnalyticStraightTrajectory(toTarget, targetVelocity, projectileSpeed, out float t))
+        {
+            return false; // Нет реального пересечения
+        }
 
-        float timeToTarget = distance / projectileSpeed;
-        Vector3 leadOffset = targetPos + targetVelocity * timeToTarget;
-
-        return (leadOffset - shooterPos).normalized;
+        Vector3 aimPoint = targetPos + targetVelocity * t;
+        fireDirection = (aimPoint - shooterPos).normalized;
+        return true;
     }
 
-    public Vector3 CalculateStraightAimOffsetVector(Vector3 gunPosition, Vector3 enemyCurrentPosition, Vector3 enemyVelocity, float aimDuration, float projectileSpeed)
+    public bool CalculateStraightAimDirectionVector(Vector3 gunPosition, Vector3 targetPosition, Vector3 targetVelocity, float aimDuration, float projectileSpeed, out Vector3 aimDirection)
     {
-        Vector3 offsetDuringRotation = enemyVelocity * aimDuration;
-        Vector3 predictedTargetPos = enemyCurrentPosition + offsetDuringRotation;
-        Vector3 toFutureTarget = predictedTargetPos - gunPosition;
+        aimDirection = Vector3.zero;
 
-        float distance = toFutureTarget.magnitude;
-        float timeToImpact = distance / projectileSpeed;
+        Vector3 predictedTargetPos = targetPosition + targetVelocity * aimDuration;
+        Vector3 toTarget = predictedTargetPos - gunPosition;
         
-        Vector3 futureOffset = enemyVelocity * timeToImpact;
-        Vector3 aimPoint = predictedTargetPos + futureOffset;
-        return aimPoint - gunPosition;
+        if (!SolveAnalyticStraightTrajectory(toTarget, targetVelocity, projectileSpeed, out float t))
+        {
+            return false; // Нет реального пересечения
+        }
+
+        Vector3 aimPoint = predictedTargetPos + targetVelocity * t;
+        aimDirection = (aimPoint - gunPosition).normalized;
+
+        return true;
     }
 
-    public bool CalculateParabolicAimOffsetVector(Vector3 gunPosition, Vector3 targetPosition, Vector3 targetVelocity, float aimDuration, float projectileSpeed, out Vector3 initialVelocity)
+    public bool CalculateParabolicAimDirectionVector(Vector3 gunPosition, Vector3 targetPosition, Vector3 targetVelocity, float aimDuration, float projectileSpeed, out Vector3 initialVelocity)
     {
         Vector3 predictedTargetPos = targetPosition + targetVelocity * aimDuration;
         return SolveBallisticArc(gunPosition, predictedTargetPos, targetVelocity, projectileSpeed, out initialVelocity);
     }
 
-    public bool CalculateParabolicVelocity(Vector3 shooterPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed, out Vector3 initialVelocity)
+    public bool CalculateParabolicFireVelocity(Vector3 shooterPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed, out Vector3 initialVelocity)
     {
         return SolveBallisticArc(shooterPos, targetPos, targetVelocity, projectileSpeed, out initialVelocity);
+    }
+
+    private bool SolveAnalyticStraightTrajectory(Vector3 toTarget, Vector3 targetVelocity, float projectileSpeed, out float time)
+    {
+        time = 0f;
+        float distanceSquared = toTarget.sqrMagnitude;
+
+        float targetSpeedSquared = targetVelocity.sqrMagnitude;
+        float projectileSpeedSquared = projectileSpeed * projectileSpeed;
+
+        float a = targetSpeedSquared - projectileSpeedSquared;
+        float b = 2f * Vector3.Dot(toTarget, targetVelocity);
+        float c = distanceSquared;
+
+        float discriminant = b * b - 4f * a * c;
+
+        if (discriminant < 0f)
+            return false; // Нет реального пересечения
+
+        float sqrtDiscriminant = Mathf.Sqrt(discriminant);
+
+        if (Mathf.Abs(a) < 0.001f)
+        {
+            // Почти нулевая разность скоростей, линейное уравнение
+            time = -c / b;
+        }
+        else
+        {
+            float t1 = (-b - sqrtDiscriminant) / (2f * a);
+            float t2 = (-b + sqrtDiscriminant) / (2f * a);
+
+            // Берем минимальное положительное время
+            time = Mathf.Min(t1, t2);
+            if (time < 0f) time = Mathf.Max(t1, t2);
+            if (time < 0f) return false; // Обе t отрицательные — цель уже ушла
+        }
+
+        return true; // Успешно нашли время
     }
 
     private static bool SolveBallisticArc(Vector3 shooterPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed, out Vector3 initialVelocity)
