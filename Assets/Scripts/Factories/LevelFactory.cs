@@ -17,12 +17,12 @@ public class LevelFactory : ILevelFactory
         _timerService = timerService;
     }
 
-    public LevelContoller CreateLevel()
+    public LevelPresenter CreateLevel()
     {
         var levelViewPrefab = _assetLoader.Load<LevelView>(AssetConstants.LevelViewPrefabPath);
         var levelView = Object.Instantiate(levelViewPrefab);
         var levelModel = new LevelModel(_levelConfig.towerSlots, _levelConfig.spawnEnemyDelay);
-        var levelContoller = new LevelContoller(levelModel, levelView, _towerFactory, _timerService, _enemyFactory);
+        var levelContoller = new LevelPresenter(levelModel, levelView, _towerFactory, _timerService, _enemyFactory);
         return levelContoller;
     }
 }

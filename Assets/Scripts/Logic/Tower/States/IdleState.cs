@@ -1,13 +1,9 @@
-using System;
-
 public class IdleState : ITowerState
 {
     private readonly TowerModel _model;
-    private readonly TowerStateMachine _stateMachine;
 
-    public IdleState(TowerModel model, TowerStateMachine stateMachine)
+    public IdleState(TowerModel model)
     {
-        _stateMachine = stateMachine;
         _model = model;
     }
 
@@ -16,19 +12,19 @@ public class IdleState : ITowerState
         _model.DetectedArea.OnEnemyEntered += OnTargetDetected;
 
         if (_model.DetectedArea.GetFirstEnemy() != null) {
-            _stateMachine.ChangeState<SearchTargetState>();
+            _model.StateMachine.ChangeState<SearchTargetState>();
         }
     }
-
-    public void Tick() { }
 
     public void Exit()
     {
         _model.DetectedArea.OnEnemyEntered -= OnTargetDetected;
     }
 
-    private void OnTargetDetected(IEnemy enemy)
+    public void Tick() { }
+
+    private void OnTargetDetected(ITarget _)
     {
-        _stateMachine.ChangeState<SearchTargetState>();
+        _model.StateMachine.ChangeState<SearchTargetState>();
     }
 }

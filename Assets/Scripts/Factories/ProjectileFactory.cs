@@ -1,19 +1,20 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 public class ProjectileFactory : IProjectileFactory
 {
-    private readonly IDamageSystem _damageSystem;
-    private ProjectileConfigSO[] _configs;
-    private IAssetLoadService _assetLoader;
-    private ISimulationUpdateService _updateService;
+    private readonly ProjectileConfigSO[] _configs;
+    private readonly IAssetLoadService _assetLoader;
+    private readonly ISimulationUpdateService _updateService;
+    private readonly Dictionary<ProjectileType, Queue<ProjectilePresenter>> _pools;
 
-    public ProjectileFactory(ProjectileConfigSO[] configs, IAssetLoadService loader, ISimulationUpdateService updater, IDamageSystem damageSystem)
+    public ProjectileFactory(ProjectileConfigSO[] configs, IAssetLoadService loader, ISimulationUpdateService updater)
     {
         _configs = configs;
         _assetLoader = loader;
         _updateService = updater;
-        _damageSystem = damageSystem;
+        _pools = new Dictionary<ProjectileType, Queue<ProjectilePresenter>>();
     }
 
     public ProjectilePresenter Create(ProjectileType projectileType, Vector3 startPosition, ITarget target)
@@ -24,11 +25,50 @@ public class ProjectileFactory : IProjectileFactory
             throw new System.Exception($"No config for this type={projectileType} of projectile");
         }
 
-        ProjectilePresenter presenter = GetPresenterByType(config, startPosition, target);
+        if (_pools.ContainsKey(projectileType) && _pools[projectileType].Count > 0)
+        {
+            var presenter = _pools[projectileType].Dequeue();
+            presenter.OnLifeTimeEnded += OnEndedPresenterLifeTimeHandler;
+            presenter.Init(startPosition);
+            return presenter;
+        }
+        else
+        {
+            ProjectilePresenter presenter = GetPresenterByType(config, startPosition, target);
+            presenter.OnLifeTimeEnded += OnEndedPresenterLifeTimeHandler;
+            _updateService.Register(presenter);
 
-        _updateService.Register(presenter);
+            return presenter;
+        }
+    }
 
-        return presenter;
+    public void Dispose(ProjectilePresenter projectile)
+    {
+        projectile.Dispose();
+        projectile.OnLifeTimeEnded -= OnEndedPresenterLifeTimeHandler;
+        if (_pools.ContainsKey(projectile.Model.ProjectileType))
+        {
+            _pools[projectile.Model.ProjectileType].Enqueue(projectile);
+        }
+        else
+        {
+            _pools.Add(projectile.Model.ProjectileType, new Queue<ProjectilePresenter>());
+        }
+    }
+
+    public CannonProjectilePresenter CreateCannon(ProjectileType projectileType, Vector3 shootPointPosition, ITarget target)
+    {
+        return Create(projectileType, shootPointPosition, target) as CannonProjectilePresenter;
+    }
+
+    public GuidedProjectilePresenter CreateGuided(ProjectileType projectileType, Vector3 shootPointPosition, ITarget target)
+    {
+        return Create(projectileType, shootPointPosition, target) as GuidedProjectilePresenter;
+    }
+
+    private void OnEndedPresenterLifeTimeHandler(ProjectilePresenter presenter)
+    {
+        Dispose(presenter);
     }
 
     private ProjectilePresenter GetPresenterByType(ProjectileConfigSO config, Vector3 startPosition, ITarget target)
@@ -37,27 +77,25 @@ public class ProjectileFactory : IProjectileFactory
         {
             case ProjectileType.Cannon:
                 var cannonView = LoadAndInstantiateView<CannonProjectileView>(startPosition, config.prefab.Path);
-                var cannonModel = new CannonProjectileModel(startPosition, config.speed, config.damage, target);
-                return new CannonProjectilePresenter(cannonView, cannonModel);
+                IProjectileMover cannonMover = config.trajectoryMode switch
+                {
+                    TrajectoryMode.Parabolic => new ParabolicTrajectoryProjectileMover(),
+                    TrajectoryMode.Straight => new StraightTrajectoryProjectileMover(),
+                    _ => throw new System.Exception($"Unsupported trajectory mode: {config.trajectoryMode}")
+                };
+                
+                var cannonModel = new CannonProjectileModel(cannonMover, config.type, startPosition, config.speed, config.damage, target, config.hitDistance);
+                return new CannonProjectilePresenter(cannonModel, cannonView, config.lifeTime);
             case ProjectileType.Guided:
                 var guidedView = LoadAndInstantiateView<GuidedProjectileView>(startPosition, config.prefab.Path);
-                var guidedModel = new GuidedProjectileModel(startPosition, config.speed, config.damage, target);
-                return new GuidedProjectilePresenter(guidedView, guidedModel);
+                var guidedMover = new GuidedProjectileMover();
+                var guidedModel = new GuidedProjectileModel(guidedMover, config.type, startPosition, config.speed, config.damage, target, config.hitDistance);
+                return new GuidedProjectilePresenter(guidedModel, guidedView, config.lifeTime);
             default:
                 throw new System.Exception($"No presenter for this type={config.type} of projectile");
         }
     }
-
-    public void Dispose(ProjectileModel projectile)
-    {
-        throw new System.NotImplementedException();
-    }
-
-    private void OnProjectileHit(ProjectileModel model)
-    {
-        _damageSystem.ApplyDamage(model.Target, model.Damage);
-    }
-
+    
     private TTowerView LoadAndInstantiateView<TTowerView>(Vector3 position, string path) where TTowerView : ProjectileView
     {
         var prefab = _assetLoader.Load<TTowerView>(path);

@@ -1,18 +1,16 @@
 public class FiringState : ITowerState
 {
     private readonly TowerModel _model;
-    private readonly TowerStateMachine _stateMachine;
 
-    public FiringState(TowerModel model, TowerStateMachine stateMachine)
+    public FiringState(TowerModel model)
     {
         _model = model;
-        _stateMachine = stateMachine;
     }
 
     public void Enter()
     {
-        _model.Shoot(); // Сигнал на выстрел
-        _stateMachine.ChangeState<CooldownState>();
+        _model.Shoot();
+        _model.StateMachine.ChangeState<CooldownState>();
     }
 
     public void Tick() { }

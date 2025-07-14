@@ -2,28 +2,27 @@ using UnityEngine;
 
 public class CooldownState : ITowerState
 {
-    private readonly TowerModel _towerModel;
-    private readonly TowerStateMachine _stateMachine;
+    private readonly TowerModel _model;
+
     private float _currentCooldown;
 
-    public CooldownState(TowerModel towerModel, TowerStateMachine stateMachine)
+    public CooldownState(TowerModel towerModel)
     {
-        _towerModel = towerModel;
-        _stateMachine = stateMachine;
+        _model = towerModel;
     }
 
     public void Enter()
     {
-        _currentCooldown = _towerModel.FireCooldown;
+        _currentCooldown = _model.FireCooldown;
     }
-
-    public void Exit() { }
 
     public void Tick()
     {
         _currentCooldown -= Time.deltaTime;
 
         if (_currentCooldown <= 0f)
-            _stateMachine.ChangeState<IdleState>();
+            _model.StateMachine.ChangeState<IdleState>();
     }
+
+    public void Exit() { }
 }

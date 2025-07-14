@@ -1,4 +1,4 @@
 public interface ILevelFactory : IService
 {
-    LevelContoller CreateLevel();
+    LevelPresenter CreateLevel();
 }

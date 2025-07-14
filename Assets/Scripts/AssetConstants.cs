@@ -6,5 +6,10 @@ public static class AssetConstants
     public const string ProjectileConfigsPath = "Configs/Projectiles/ContainerProjectileConfigs";
     public const string EnemyConfigPath = "Configs/Enemies/EnemyConfig";
     public const string LevelViewPrefabPath = "Level/LevelView";
-    public const string UpdateServicePath = "Services/UpdateService";
+    
+    public class Services
+    {
+        public const string UpdateServicePath = "Services/UpdateService";
+        public const string DetectedAreaPath = "Services/DetectedArea";
+    }
 }

@@ -3,34 +3,56 @@ using UnityEngine;
 
 public abstract class TowerModel
 {
+    public event Action OnStopAimTarget;
     public event Action<Transform> OnShoot;
     public event Action<ITarget> OnAimAtTarget;
-
     public DetectedArea DetectedArea { get; private set; }
-    public TowerTargetingSystem TargetingSystem { get; private set; }
+    public IDamageSystem DamageSystem { get; private set; }
+    public ITowerTargetingSystem TargetingSystem { get; private set; }
     public TowerStateMachine StateMachine { get; private set; }
     public float FireCooldown { get; }
     public ITarget Target { get; private set; }
-    public float RotateDuration { get; private set; }
+    public ProjectileType ProjectileType { get; private set; }
     public float ProjectileSpeed { get; private set; }
     public Vector3 Position { get; private set; }
-    public Vector3 LeadOffset { get; private set; }
+    public float AimDuration { get; private set; }
+    public Vector3 ShootPointPosition { get; private set; }
 
-    public TowerModel(float cooldown, DetectedArea detectedArea)
+    protected readonly IProjectileFactory _projectileFactory;
+
+    public TowerModel(
+        Vector3 shootPointPosition,
+        float cooldown,
+        float projectileSpeed,
+        DetectedArea detectedArea,
+        ITowerTargetingSystem targetingSystem,
+        IDamageSystem damageSystem,
+        ProjectileType projectileType,
+        IProjectileFactory projectileFactory
+        )
     {
+        ShootPointPosition = shootPointPosition;
         FireCooldown = cooldown;
+        ProjectileSpeed = projectileSpeed;
         DetectedArea = detectedArea;
-        RotateDuration = 1f;
-        SetupStateMachine();
+        AimDuration = 2f;
+        ProjectileType = projectileType;
+        TargetingSystem = targetingSystem;
+        DamageSystem = damageSystem;
+        _projectileFactory = projectileFactory;
     }
 
     protected virtual void SetupStateMachine()
     {
         StateMachine = new TowerStateMachine();
-        StateMachine.AddState(new IdleState(this, StateMachine));
-        StateMachine.AddState(new SearchTargetState(this, StateMachine));
-        StateMachine.AddState(new AimingState(this, StateMachine));
-        StateMachine.AddState(new CooldownState(this, StateMachine));
+        StateMachine.AddState(new IdleState(this));
+        StateMachine.AddState(new SearchTargetState(this));
+        StateMachine.AddState(new CooldownState(this));
+    }
+
+    public void Init()
+    {
+        SetupStateMachine();
     }
 
     public void Tick()
@@ -40,12 +62,16 @@ public abstract class TowerModel
 
     public void SetTarget(ITarget newTarget) => Target = newTarget;
 
+    public abstract void DetectedTaget();
     public abstract void Shoot();
-
     public void Aim() => OnAimAtTarget?.Invoke(Target);
 
-    public void SetLeadOffset(Vector3 leadOffset)
+    public void OnStopAim() => OnStopAimTarget?.Invoke();
+
+    public void Start()
     {
-        LeadOffset = leadOffset;
+        StateMachine.ChangeState<IdleState>();
     }
+
+    protected abstract void OnHitCallback(ProjectilePresenter presenter);
 }

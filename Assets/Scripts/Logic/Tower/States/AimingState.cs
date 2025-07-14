@@ -1,23 +1,41 @@
+using UnityEngine;
+
 public class AimingState : ITowerState
 {
     private readonly TowerModel _model;
-    private readonly TowerStateMachine _stateMachine;
+    private float _aimDuration;
 
-    public AimingState(TowerModel model, TowerStateMachine stateMachine)
+    public AimingState(TowerModel model)
     {
         _model = model;
-        _stateMachine = stateMachine;
     }
 
-    public void Enter() { }
+    public void Enter()
+    {
+        _model.DetectedArea.OnEnemyExited += OnEnemyExitedHandler;
+        _aimDuration = _model.AimDuration;
+        _model.Aim();
+    }
 
     public void Tick()
     {
-        var leadOffset = _model.TargetingSystem.CalculateLeadVector(_model.Position, _model.Target.CurrentPosition, _model.Target.Velocity, _model.ProjectileSpeed);
-        _model.SetLeadOffset(leadOffset);
-        _model.Aim(); // Сигнал на вращение башни
+        _aimDuration -= Time.deltaTime;
 
+        if (_aimDuration <= 0f)
+            _model.StateMachine.ChangeState<FiringState>();
     }
 
-    public void Exit() { }
+    public void Exit()
+    {
+        _model.DetectedArea.OnEnemyExited -= OnEnemyExitedHandler;
+        _model.OnStopAim();
+    }
+    
+    private void OnEnemyExitedHandler(ITarget target)
+    {
+        if (_model.Target == target) {
+            _model.DetectedArea.OnEnemyExited -= OnEnemyExitedHandler;
+            _model.StateMachine.ChangeState<SearchTargetState>();
+        }
+    }
 }

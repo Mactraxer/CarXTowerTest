@@ -1,26 +1,20 @@
 public class SearchTargetState : ITowerState
 {
-    private TowerModel _towerModel;
-    private TowerStateMachine _stateMachine;
+    private readonly TowerModel _model;
 
-    public SearchTargetState(TowerModel towerModel, TowerStateMachine stateMachine)
+    public SearchTargetState(TowerModel towerModel)
     {
-        _towerModel = towerModel;
-        _stateMachine = stateMachine;
+        _model = towerModel;
     }
 
     public void Enter()
     {
-        var target = _towerModel.TargetingSystem.FindTarget(_towerModel);
-        _towerModel.SetTarget(target);
-        _stateMachine.ChangeState<AimingState>();
+        var target = _model.TargetingSystem.FindTarget(_model, _model.DetectedArea);
+        _model.SetTarget(target);
+        _model.DetectedTaget();
     }
 
-    public void Exit()
-    {
-    }
+    public void Exit() { }
 
-    public void Tick()
-    {
-    }
+    public void Tick() { }
 }

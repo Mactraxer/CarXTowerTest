@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class TowerPresenter : IDisposable, ITickable
+public abstract class TowerPresenter : IDisposable, ITickable
 {
     private readonly TowerModel model;
     private readonly TowerView view;
@@ -20,13 +20,7 @@ public class TowerPresenter : IDisposable, ITickable
         view.Shoot();
     }
 
-    private void OnStartAim(ITarget target)
-    {
-        view.AimAt(target.CurrentPosition, model.RotateDuration, () =>
-        {
-            model.StateMachine.ChangeState<FiringState>();
-        });
-    }
+    protected abstract void OnStartAim(ITarget target);
 
     public void Tick()
     {
@@ -37,5 +31,10 @@ public class TowerPresenter : IDisposable, ITickable
     {
         model.OnAimAtTarget -= OnStartAim;
         model.OnShoot -= OnStartShoot;
+    }
+
+    public void Start()
+    {
+        model.Start();
     }
 }

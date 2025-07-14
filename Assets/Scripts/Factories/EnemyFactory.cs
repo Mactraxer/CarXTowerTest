@@ -8,7 +8,7 @@ public class EnemyFactory : IEnemyFactory
     private readonly ISimulationUpdateService _updater;
     private readonly Vector3 _spawnPoint;
     private readonly Vector3 _destinationPoint;
-    private List<EnemyPresenter> _enemiesPool;
+    private readonly List<EnemyPresenter> _enemiesPool;
 
     public EnemyFactory(EnemyConfigSO config, IAssetLoadService loader, ISimulationUpdateService updater, Vector3 spawnPoint, Vector3 destinationPoint)
     {
@@ -34,10 +34,13 @@ public class EnemyFactory : IEnemyFactory
         else
         {
             var prefab = _assetLoader.Load<EnemyView>(_config.enemyPrefab.Path);
-            var enemyView = Object.Instantiate(prefab, _spawnPoint, Quaternion.identity);
 
-            var model = new EnemyModel(_spawnPoint, _destinationPoint, _config.speed, _config.health);
+            var enemyView = Object.Instantiate(prefab, _spawnPoint, Quaternion.identity);
+            var model = new EnemyModel(_spawnPoint, _destinationPoint, _config.speed, _config.health, _config.arrivedDistance);
             var presenter = new EnemyPresenter(model, enemyView);
+
+            var enemyProxy = enemyView.gameObject.AddComponent<EnemyProxy>();
+            enemyProxy.Init(model);
             _updater.Register(presenter);
 
             return presenter;   
